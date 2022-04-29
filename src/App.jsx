@@ -28,8 +28,8 @@ const connectReaderHandler = async () => {
   var config = { simulated: false, location: 'tml_Emcx9whbMIhEha' }; //get from backend
 
   var discoverResult = await terminal.discoverReaders(config);
+  console.log('discovered readers: ', discoverResult);
 
-  console.log(discoverResult);
   if (discoverResult.error) {
     console.log('Failed to discover: ', discoverResult.error);
   } else if (discoverResult.discoveredReaders.length === 0) {
@@ -39,16 +39,17 @@ const connectReaderHandler = async () => {
     var selectedReader = discoverResult.discoveredReaders[0];
 
     var readerConnection = await terminal.connectReader(selectedReader);
+    
     if (readerConnection.error) {
       console.log('Failed to connect: ', readerConnection.error);
     } else {
-      console.log('Connected to reader: ', readerConnection.reader.label);
+      console.log('Connected to reader: ', readerConnection);
     }
   }
   return readerConnection;
 };
 
-const connectedReader = await connectReaderHandler();
+const connectedReader = await connectReaderHandler();  
 
 function App() {
   const [token, setToken] = useState();
@@ -74,8 +75,6 @@ function App() {
       console.log(response, y);
       setToken(response.data);
     });
-
-    setToken('token');
   };
 
   const handleStartPaymentIntent = () => {
@@ -98,7 +97,8 @@ function App() {
       } else {
         console.log('Collected Confirmation Details: ', result);
 
-        terminal.processPayment(result.paymentIntent).then((result) => {
+        terminal.processPayment(result.paymentIntent)
+        .then((result) => {
           console.log('Process result', result);
           axios
             .post(`${baseURL}/confirm_payment_intent`, { paymentIntentId: result.paymentIntent.id })
@@ -108,8 +108,11 @@ function App() {
               window.open(`https://dashboard.stripe.com/test/payments/${paymentIntentIdLink}`);
             })
             .catch((error) => {
-              console.log('error', error);
+              console.log('error fetching', error);
             });
+        })
+        .catch(error => {
+          console.log('error processing payment,  error');
         });
       }
     });
@@ -127,9 +130,11 @@ function App() {
           <button onClick={handleGetToken}>Get Token</button>
           <p>{JSON.stringify(token)}</p>
         </div>
+
         <div>
           Reader:
-          <a style={{ color: 'green', fontStyle: 'italic', fontWeight: 800 }}> {connectedReader.reader.status} </a>
+          <span> {connectedReader?.reader?.label}</span>
+          <a style={{ color: 'green', fontStyle: 'italic', fontWeight: 800 }}> {connectedReader?.reader?.status} </a>
         </div>
 
         {console.log('connectedReader', connectedReader)}
@@ -147,14 +152,12 @@ function App() {
       <div>
         {paymentIntentIdLink && (
           <a href={`https://dashboard.stripe.com/test/payments/${paymentIntentIdLink}`} target='_blank'>
-            {' '}
-            Stripe link :)
+            Stripe link
           </a>
         )}
       </div>
     </>
   );
 }
-
 
 export default App;
